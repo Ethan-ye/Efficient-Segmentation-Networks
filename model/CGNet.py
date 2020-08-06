@@ -371,3 +371,15 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = CGNet(classes=19).to(device)
     summary(model,(3,512,1024))
+
+# summary(model,(3,512,1024))
+# ================================================================
+# Total params: 496,306
+# Trainable params: 496,306
+# Non-trainable params: 0
+# ----------------------------------------------------------------
+# Input size (MB): 6.00
+# Forward/backward pass size (MB): 2760.19
+# Params size (MB): 1.89
+# Estimated Total Size (MB): 2768.09
+# ----------------------------------------------------------------

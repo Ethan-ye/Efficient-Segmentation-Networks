@@ -19,6 +19,9 @@
 # Uses the mapping defined in 'labels.py'
 #
 
+## from cityscapesscripts https://github.com/mcordts/cityscapesScripts
+## =annotation.py+labels.py+json2labelImg.py+createTrainIdLabelImgs.py
+
 # python imports
 from __future__ import print_function, absolute_import, division
 import os, glob, sys
@@ -33,6 +36,7 @@ from collections import namedtuple
 import datetime
 import locale
 
+## from annotation.py file
 # A point in a polygon
 Point = namedtuple('Point', ['x', 'y'])
 
@@ -361,6 +365,7 @@ for label in labels:
     else:
         category2labels[category] = [label]
 
+## from json2labelImg.py file
 # Convert the given annotation to a label image
 def createLabelImage(annotation, encoding, outline=None):
     # the size of the image
@@ -438,6 +443,7 @@ def json2labelImg(inJson,outImg,encoding="ids"):
     labelImg   = createLabelImage( annotation , encoding )
     labelImg.save( outImg )
 
+## from createTrainIdLabelImgs.py file
 # The main method
 def main(cityscapesPath):
     # how to search for all ground truth

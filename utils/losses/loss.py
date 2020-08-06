@@ -11,7 +11,7 @@ __all__ = ["CrossEntropyLoss2d", "CrossEntropyLoss2dLabelSmooth",
            "FocalLoss2d", "LDAMLoss", "ProbOhemCrossEntropy2d",
            "LovaszSoftmax"]
 
-
+#按照class比例加权重：最常用处理类别不平衡问题的方式
 class CrossEntropyLoss2d(_WeightedLoss):
     """
     Standard pytorch weighted nn.CrossEntropyLoss
@@ -52,7 +52,7 @@ class CrossEntropyLoss2d(_WeightedLoss):
 #         return self.loss(F.log_softmax(outputs, dim=1), targets)
 
 
-
+#软标签
 class CrossEntropyLoss2dLabelSmooth(_WeightedLoss):
     """
     Refer from https://arxiv.org/pdf/1512.00567.pdf
@@ -61,6 +61,8 @@ class CrossEntropyLoss2dLabelSmooth(_WeightedLoss):
     :param eta: float
     :return:
         N x C onehot smoothed vector
+    #软标签，比如标准二分类标签为[0，1]，则软分类为[0.05,0.95],这样可以避免原始数据中存在的标签错误
+    #https://blog.csdn.net/qq_43211132/article/details/100510113
     """
 
     def __init__(self, weight=None, ignore_label=255, epsilon=0.1, reduction='mean'):
@@ -88,6 +90,9 @@ class CrossEntropyLoss2dLabelSmooth(_WeightedLoss):
 https://arxiv.org/abs/1708.02002
 # Credit to https://github.com/clcarwin/focal_loss_pytorch
 """
+#使用1-p 作为权重的底数，这样预测概率越高的损失的权重就越小
+#根据gt标签，得到所有的真实类的预测结果，如果所有的结果都正确，完美情况下所有的预测概率都为1
+#也就是对于的预测结果，那些预测效果好的，即概率值比较高的，給其较小的权重，而预测效果差的，给与较高的权重
 class FocalLoss2d(nn.Module):
     def __init__(self, alpha=0.5, gamma=2, weight=None, ignore_index=255, size_average=True):
         super().__init__()
@@ -151,6 +156,8 @@ class LDAMLoss(nn.Module):
 
 
 
+# OHEM：只保留loss最高的那些样本，完全忽略掉简单样本
+# Online Hard Example Mining
 
 # Adapted from OCNet Repository (https://github.com/PkuRainBow/OCNet)
 class ProbOhemCrossEntropy2d(nn.Module):
@@ -212,6 +219,7 @@ class ProbOhemCrossEntropy2d(nn.Module):
 # ==========================================================================================================================
 # ==========================================================================================================================
 # class-balanced loss
+# 按照gt标签，取真实类对应的预测概率值，并取对数，然后按照相同权重得到损失均值
 class CrossEntropy2d(nn.Module):
 
     def __init__(self, size_average=True, ignore_label=255, use_weight=True):

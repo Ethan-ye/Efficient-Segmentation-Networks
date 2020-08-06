@@ -7,3 +7,8 @@ __pycache__/
 result/
 server/
 checkpoint/
+*.png
+.gitkeep
+*.csv
+dataset/t_creat_dataset.py
+dataset/creat_dataset.py

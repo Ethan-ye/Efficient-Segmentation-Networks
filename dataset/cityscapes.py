@@ -15,8 +15,13 @@ class CityscapesDataSet(data.Dataset):
           ├── gtFine
           ├── leftImg8bit
         list_path: cityscapes_train_list.txt, include partial path
-        mean: bgr_mean (73.15835921, 82.90891754, 72.39239876)
-
+        # mean: bgr_mean (73.15835921, 82.90891754, 72.39239876)
+        mean:    [72.78043  83.212006 73.45284 ] #BGR
+        std:     [45.485073 46.365917 45.199677] #BGR
+        weight:  [ 2.5959933  6.7415504  3.5354059  9.8663225  9.690899   9.369352
+                   10.289121   9.953208   4.3097677  9.490387   7.674431   9.396905
+                   10.347791   6.3927646 10.226669  10.241062  10.280587  10.396974
+                   10.055647 ]
     """
 
     def __init__(self, root='', list_path='', max_iters=None,
@@ -56,6 +61,9 @@ class CityscapesDataSet(data.Dataset):
         label = cv2.imread(datafiles["label"], cv2.IMREAD_GRAYSCALE)
         size = image.shape
         name = datafiles["name"]
+
+        # 对图像进行随机缩放，大于corp的尺寸，进行裁剪；小于则进行pad。
+        # 同时对数据进行0中心化。
         if self.scale:
             scale = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
             f_scale = scale[random.randint(0, 5)]
@@ -67,20 +75,20 @@ class CityscapesDataSet(data.Dataset):
 
         image -= self.mean
         # image = image.astype(np.float32) / 255.0
-        image = image[:, :, ::-1]  # change to RGB
-        img_h, img_w = label.shape
+        image = image[:, :, ::-1]  # change to RGB # a[::-1]=a[-1:-len(a)-1:-1] 逆序
+        img_h, img_w = label.shape # 当resize后的图像的尺寸小于crop时，进行pad
         pad_h = max(self.crop_h - img_h, 0)
         pad_w = max(self.crop_w - img_w, 0)
         if pad_h > 0 or pad_w > 0:
             img_pad = cv2.copyMakeBorder(image, 0, pad_h, 0,
                                          pad_w, cv2.BORDER_CONSTANT,
-                                         value=(0.0, 0.0, 0.0))
+                                         value=(0.0, 0.0, 0.0))         #image： pad 0
             label_pad = cv2.copyMakeBorder(label, 0, pad_h, 0,
                                            pad_w, cv2.BORDER_CONSTANT,
-                                           value=(self.ignore_label,))
+                                           value=(self.ignore_label,))  #ladel： pad ignore
         else:
             img_pad, label_pad = image, label
-
+        #在有效的图像范围corp
         img_h, img_w = label_pad.shape
         h_off = random.randint(0, img_h - self.crop_h)
         w_off = random.randint(0, img_w - self.crop_w)

@@ -1,4 +1,6 @@
-import os,sys
+import os
+import sys
+import argparse
 import time
 import torch
 from torch import optim
@@ -7,30 +9,44 @@ import timeit
 import math
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
 from matplotlib import pyplot as plt
-import torch.backends.cudnn as cudnn
+# import torch.backends.cudnn as cudnn
 from argparse import ArgumentParser
 # user
 from builders.model_builder import build_model
 from builders.dataset_builder import build_dataset_train
 from utils.utils import setup_seed, init_weight, netParams
 from utils.metric.metric import get_iou
-from utils.losses.loss import LovaszSoftmax, CrossEntropyLoss2d, CrossEntropyLoss2dLabelSmooth,\
+from utils.losses.loss import LovaszSoftmax, CrossEntropyLoss2d, CrossEntropyLoss2dLabelSmooth, \
     ProbOhemCrossEntropy2d, FocalLoss2d
 from utils.optim import RAdam, Ranger, AdamW
 from utils.scheduler.lr_scheduler import WarmupPolyLR
 
-
+matplotlib.use('Agg')
 sys.setrecursionlimit(1000000)  # solve problem 'maximum recursion depth exceeded'
 
 torch_ver = torch.__version__[:3]
 if torch_ver == '0.3':
     from torch.autograd import Variable
-print(torch_ver)
+print('torch_ver:', torch_ver)
 
 GLOBAL_SEED = 1234
 
+
+def str2bool(v):
+    """ Usage:
+    parser.add_argument('--pretrained', default=True, type=str2bool, nargs='?', const=True,
+                        dest='pretrained', help='Whether to use pretrained models.')
+    --pretrained    # 使用const中指定的值作为参数值
+    --pretrained 0  # False
+    不加参数         # True
+    """
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Unsupported value encountered.')
 
 
 def parse_args():
@@ -47,22 +63,31 @@ def parse_args():
     # training hyper params
     parser.add_argument('--max_epochs', type=int, default=1000,
                         help="the number of epochs: 300 for train set, 350 for train+val set")
-    parser.add_argument('--random_mirror', type=bool, default=True, help="input image random mirror")
-    parser.add_argument('--random_scale', type=bool, default=True, help="input image resize 0.5 to 2")
+    # parser.add_argument('--random_mirror', type=bool, default=True, help="input image random mirror")
+    parser.add_argument('--random_mirror', default=True, type=str2bool, nargs='?', const=True,
+                        help="input image random mirror")
+    # parser.add_argument('--random_scale', type=bool, default=True, help="input image resize 0.5 to 2")
+    parser.add_argument('--random_scale', default=True, type=str2bool, nargs='?', const=True,
+                        help="input image resize 0.5 to 2")
     parser.add_argument('--lr', type=float, default=5e-4, help="initial learning rate")
     parser.add_argument('--batch_size', type=int, default=8, help="the batch size is set to 16 for 2 GPUs")
-    parser.add_argument('--optim',type=str.lower,default='adam',choices=['sgd','adam','radam','ranger'],help="select optimizer")
+    parser.add_argument('--optim', type=str.lower, default='adam', choices=['sgd', 'adam', 'radam', 'ranger'],
+                        help="select optimizer")
     parser.add_argument('--lr_schedule', type=str, default='warmpoly', help='name of lr schedule: poly')
     parser.add_argument('--num_cycles', type=int, default=1, help='Cosine Annealing Cyclic LR')
-    parser.add_argument('--poly_exp', type=float, default=0.9,help='polynomial LR exponent')
+    parser.add_argument('--poly_exp', type=float, default=0.9, help='polynomial LR exponent')
     parser.add_argument('--warmup_iters', type=int, default=500, help='warmup iterations')
     parser.add_argument('--warmup_factor', type=float, default=1.0 / 3, help='warm up start lr=warmup_factor*lr')
-    parser.add_argument('--use_label_smoothing', action='store_true', default=False, help="CrossEntropy2d Loss with label smoothing or not")
-    parser.add_argument('--use_ohem', action='store_true', default=False, help='OhemCrossEntropy2d Loss for cityscapes dataset')
-    parser.add_argument('--use_lovaszsoftmax', action='store_true', default=False, help='LovaszSoftmax Loss for cityscapes dataset')
-    parser.add_argument('--use_focal', action='store_true', default=False,help=' FocalLoss2d for cityscapes dataset')
+    parser.add_argument('--use_label_smoothing', action='store_true', default=False,
+                        help="CrossEntropy2d Loss with label smoothing or not")
+    parser.add_argument('--use_ohem', action='store_true', default=False,
+                        help='OhemCrossEntropy2d Loss for cityscapes dataset')
+    parser.add_argument('--use_lovaszsoftmax', action='store_true', default=False,
+                        help='LovaszSoftmax Loss for cityscapes dataset')
+    parser.add_argument('--use_focal', action='store_true', default=False, help=' FocalLoss2d for cityscapes dataset')
     # cuda setting
-    parser.add_argument('--cuda', type=bool, default=True, help="running on CPU or GPU")
+    # parser.add_argument('--cuda', type=bool, default=True, help="running on CPU or GPU")
+    parser.add_argument('--cuda', type=str2bool, nargs='?', const=True, help="running on CPU or GPU")
     parser.add_argument('--gpus', type=str, default="0", help="default GPU devices (0,1)")
     # checkpoint and log
     parser.add_argument('--resume', type=str, default="",
@@ -74,32 +99,22 @@ def parse_args():
     return args
 
 
-
 def train_model(args):
     """
     args:
        args: global arguments
     """
+    print(args)
+
     h, w = map(int, args.input_size.split(','))
     input_size = (h, w)
     print("=====> input size:{}".format(input_size))
-
-    print(args)
-
-    if args.cuda:
-        print("=====> use gpu id: '{}'".format(args.gpus))
-        os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
-        if not torch.cuda.is_available():
-            raise Exception("No GPU found or Wrong gpu id, please run without --cuda")
-
 
     # set the seed
     setup_seed(GLOBAL_SEED)
     print("=====> set Global Seed: ", GLOBAL_SEED)
 
-    cudnn.enabled = True
     print("=====> building network")
-
     # build the model and initialization
     model = build_model(args.model, num_classes=args.classes)
     init_weight(model, nn.init.kaiming_normal_,
@@ -114,9 +129,8 @@ def train_model(args):
     datas, trainLoader, valLoader = build_dataset_train(args.dataset, input_size, args.batch_size, args.train_type,
                                                         args.random_scale, args.random_mirror, args.num_workers)
 
-    args.per_iter = len(trainLoader)
+    args.per_iter = len(trainLoader)    #the number of batchs
     args.max_iter = args.max_epochs * args.per_iter
-
 
     print('=====> Dataset statistics')
     print("data['classWeights']: ", datas['classWeights'])
@@ -125,13 +139,13 @@ def train_model(args):
     # define loss function, respectively
     weight = torch.from_numpy(datas['classWeights'])
 
-    if args.dataset == 'camvid':
+    if (args.dataset == 'camvid') or (args.dataset == 'camvid352'):
         criteria = CrossEntropyLoss2d(weight=weight, ignore_label=ignore_label)
-    elif args.dataset == 'camvid' and args.use_label_smoothing:
+    elif (args.dataset == 'camvid') or (args.dataset == 'camvid352') and args.use_label_smoothing:
         criteria = CrossEntropyLoss2dLabelSmooth(weight=weight, ignore_label=ignore_label)
 
     elif args.dataset == 'cityscapes' and args.use_ohem:
-        min_kept = int(args.batch_size // len(args.gpus) * h * w // 16)
+        min_kept = int(args.batch_size // (len(args.gpus) if args.cuda else 1) * h * w // 16)
         criteria = ProbOhemCrossEntropy2d(use_weight=True, ignore_label=ignore_label, thresh=0.7, min_kept=min_kept)
     elif args.dataset == 'cityscapes' and args.use_label_smoothing:
         criteria = CrossEntropyLoss2dLabelSmooth(weight=weight, ignore_label=ignore_label)
@@ -144,19 +158,24 @@ def train_model(args):
             "This repository now supports two datasets: cityscapes and camvid, %s is not included" % args.dataset)
 
     if args.cuda:
+        if not torch.cuda.is_available():
+            raise Exception("No GPU found or Wrong gpu id, please run without --cuda")
+        print("=====> use gpu id: '{}'".format(args.gpus))
+        os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
         criteria = criteria.cuda()
-        if torch.cuda.device_count() > 1:
-            print("torch.cuda.device_count()=", torch.cuda.device_count())
-            args.gpu_nums = torch.cuda.device_count()
+        if len(args.gpus) > 1:
+            print("GPU for training =", len(args.gpus))
             model = nn.DataParallel(model).cuda()  # multi-card data parallel
         else:
-            args.gpu_nums = 1
             print("single GPU for training")
             model = model.cuda()  # 1-card data parallel
 
-    args.savedir = (args.savedir + args.dataset + '/' + args.model + 'bs'
-                    + str(args.batch_size) + 'gpu' + str(args.gpu_nums) + "_" + str(args.train_type) + '/')
-
+        args.savedir = (args.savedir + args.dataset + '/' + args.model + 'bs'
+                        + str(args.batch_size) + 'gpu' + str(len(args.gpus)) + "_" + str(args.train_type) + '/')
+    else:
+        print("=====> use cpu")
+        args.savedir = (args.savedir + args.dataset + '/' + args.model + 'bs'
+                        + str(args.batch_size) + 'cpu' + "_" + str(args.train_type) + '/')
 
     if not os.path.exists(args.savedir):
         os.makedirs(args.savedir)
@@ -175,18 +194,16 @@ def train_model(args):
             print("=====> no checkpoint found at '{}'".format(args.resume))
 
     model.train()
-    cudnn.benchmark = True
-    # cudnn.deterministic = True ## my add
 
-    logFileLoc = args.savedir + args.logFile
-    if os.path.isfile(logFileLoc):
-        logger = open(logFileLoc, 'a')
+
+    log_file_loc = args.savedir + args.logFile
+    if os.path.isfile(log_file_loc):
+        logger = open(log_file_loc, 'a')
     else:
-        logger = open(logFileLoc, 'w')
+        logger = open(log_file_loc, 'w')
         logger.write("Parameters: %s Seed: %s" % (str(total_paramters), GLOBAL_SEED))
         logger.write("\n%s\t\t%s\t%s\t%s" % ('Epoch', 'Loss(Tr)', 'mIOU (val)', 'lr'))
     logger.flush()
-
 
     # define optimization strategy
     if args.optim == 'sgd':
@@ -194,17 +211,20 @@ def train_model(args):
             filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     elif args.optim == 'adam':
         optimizer = torch.optim.Adam(
-            filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4)
+            filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, betas=(0.9, 0.999), eps=1e-08,
+            weight_decay=1e-4)
     elif args.optim == 'radam':
         optimizer = RAdam(
-            filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, betas=(0.90, 0.999), eps=1e-08, weight_decay=1e-4)
+            filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, betas=(0.90, 0.999), eps=1e-08,
+            weight_decay=1e-4)
     elif args.optim == 'ranger':
         optimizer = Ranger(
-            filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, betas=(0.95, 0.999), eps=1e-08, weight_decay=1e-4)
+            filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, betas=(0.95, 0.999), eps=1e-08,
+            weight_decay=1e-4)
     elif args.optim == 'adamw':
         optimizer = AdamW(
-            filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4)
-
+            filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, betas=(0.9, 0.999), eps=1e-08,
+            weight_decay=1e-4)
 
     lossTr_list = []
     epoches = []
@@ -241,15 +261,13 @@ def train_model(args):
         state = {"epoch": epoch + 1, "model": model.state_dict()}
 
         # Individual Setting for save model !!!
-        if args.dataset == 'camvid':
+        if (args.dataset == 'camvid') or (args.dataset == 'camvid352'):
             torch.save(state, model_file_name)
         elif args.dataset == 'cityscapes':
             if epoch >= args.max_epochs - 10:
                 torch.save(state, model_file_name)
             elif not epoch % 50:
                 torch.save(state, model_file_name)
-
-
 
         # draw plots for visualization
         if epoch % 50 == 0 or epoch == (args.max_epochs - 1):
@@ -296,9 +314,9 @@ def train(args, train_loader, model, criterion, optimizer, epoch):
 
     total_batches = len(train_loader)
     print("=====> the number of iterations per epoch: ", total_batches)
-    st = time.time()
+    start_time_epoch = time.time()
+    start_time_iter = time.time()
     for iteration, batch in enumerate(train_loader, 0):
-
 
         args.per_iter = total_batches
         args.max_iter = args.max_epochs * args.per_iter
@@ -309,37 +327,39 @@ def train(args, train_loader, model, criterion, optimizer, epoch):
             scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)
         elif args.lr_schedule == 'warmpoly':
             scheduler = WarmupPolyLR(optimizer, T_max=args.max_iter, cur_iter=args.cur_iter, warmup_factor=1.0 / 3,
-                                 warmup_iters=args.warmup_iters, power=0.9)
-
-
+                                     warmup_iters=args.warmup_iters, power=0.9)
 
         lr = optimizer.param_groups[0]['lr']
 
-        start_time = time.time()
+        start_time_FB = time.time()
         images, labels, _, _ = batch
 
-        if torch_ver == '0.3':
-            images = Variable(images).cuda()
-            labels = Variable(labels.long()).cuda()
+        if args.cuda:
+            if torch_ver == '0.3':
+                images = Variable(images).cuda()
+                labels = Variable(labels.long()).cuda()
+            else:
+                images = images.cuda()
+                labels = labels.long().cuda()
         else:
-            images = images.cuda()
-            labels = labels.long().cuda()
+            labels = labels.long()
 
         output = model(images)
         loss = criterion(output, labels)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        scheduler.step() # In pytorch 1.1.0 and later, should call 'optimizer.step()' before 'lr_scheduler.step()'
+        scheduler.step()  # In pytorch 1.1.0 and later, should call 'optimizer.step()' before 'lr_scheduler.step()'
         epoch_loss.append(loss.item())
-        time_taken = time.time() - start_time
+        time_taken_FB = time.time() - start_time_FB
+        time_taken_iter = time.time() - start_time_iter
+        start_time_iter = time.time()
 
-
-        print('=====> epoch[%d/%d] iter: (%d/%d) \tcur_lr: %.6f loss: %.3f time:%.2f' % (epoch + 1, args.max_epochs,
+        print('=====> epoch[%d/%d] iter: (%d/%d) \tcur_lr: %.6f loss: %.3f time_iter:%.2f time_F/B %.2f' % (epoch + 1, args.max_epochs,
                                                                                          iteration + 1, total_batches,
-                                                                                         lr, loss.item(), time_taken))
+                                                                                         lr, loss.item(), time_taken_iter, time_taken_FB))
 
-    time_taken_epoch = time.time() - st
+    time_taken_epoch = time.time() - start_time_epoch
     remain_time = time_taken_epoch * (args.max_epochs - 1 - epoch)
     m, s = divmod(remain_time, 60)
     h, m = divmod(m, 60)
@@ -362,12 +382,13 @@ def val(args, val_loader, model):
     total_batches = len(val_loader)
 
     data_list = []
-    for i, (input, label, size, name) in enumerate(val_loader):
+    for i, (inp, label, size, name) in enumerate(val_loader):
         start_time = time.time()
         with torch.no_grad():
-            # input_var = Variable(input).cuda()
-            input_var = input.cuda()
-            output = model(input_var)
+            if args.cuda:
+                # inp = Variable(input).cuda()
+                inp = inp.cuda()
+            output = model(inp)
         time_taken = time.time() - start_time
         print("[%d/%d]  time: %.2f" % (i + 1, total_batches, time_taken))
         output = output.cpu().data[0].numpy()
@@ -380,7 +401,6 @@ def val(args, val_loader, model):
     return meanIoU, per_class_iu
 
 
-
 if __name__ == '__main__':
     start = timeit.default_timer()
     args = parse_args()
@@ -389,9 +409,13 @@ if __name__ == '__main__':
         args.classes = 19
         args.input_size = '512,1024'
         ignore_label = 255
-    elif args.dataset == 'camvid':
+    elif args.dataset == 'camvid' :
         args.classes = 11
         args.input_size = '360,480'
+        ignore_label = 11
+    elif args.dataset == 'camvid352' :
+        args.classes = 11
+        args.input_size = '352,480'
         ignore_label = 11
     else:
         raise NotImplementedError(

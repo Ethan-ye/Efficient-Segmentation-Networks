@@ -200,15 +200,15 @@ class Classifer(nn.Module):
         x = self.conv(x)
         return x
 
-
+#该网络基本和context的网络相同，区别在于，将头部的shallownet变成了公共部分，然后再deepnet中增加了PPM
 class FastSCNN(nn.Module):
     def __init__(self, classes, aux=False, **kwargs):
         super(FastSCNN, self).__init__()
         self.aux = aux
-        self.learning_to_downsample = LearningToDownsample(32, 48, 64)
-        self.global_feature_extractor = GlobalFeatureExtractor(64, [64, 96, 128], 128, 6, [3, 3, 3])
-        self.feature_fusion = FeatureFusionModule(64, 128, 128)
-        self.classifier = Classifer(128, classes)
+        self.learning_to_downsample = LearningToDownsample(32, 48, 64)  #与contextnet的Shallow_net相似
+        self.global_feature_extractor = GlobalFeatureExtractor(64, [64, 96, 128], 128, 6, [3, 3, 3])#与contextnet的deepnet相似，多了PPM
+        self.feature_fusion = FeatureFusionModule(64, 128, 128)     #与context一样
+        self.classifier = Classifer(128, classes)                   #与context一样
         if self.aux:
             self.auxlayer = nn.Sequential(
                 nn.Conv2d(64, 32, 3, padding=1, bias=False),
@@ -241,3 +241,7 @@ if __name__ == '__main__':
     model = FastSCNN(classes=19).to(device)
     summary(model,(3,512,1024))
 
+'''
+train_time 1.58
+val_time 0.2
+'''

@@ -1,0 +1,176 @@
+"D:\ProgramData\Anaconda3\envs\tensorflow 1\python.exe" D:/GitHub/Efficient-Segmentation-Networks/train.py --help
+
+usage: train.py [-h] [--model MODEL] [--dataset DATASET]
+                [--input_size INPUT_SIZE] [--num_workers NUM_WORKERS]
+                [--classes CLASSES] [--train_type TRAIN_TYPE]
+                [--max_epochs MAX_EPOCHS] [--random_mirror RANDOM_MIRROR]
+                [--random_scale RANDOM_SCALE] [--lr LR]
+                [--batch_size BATCH_SIZE] [--optim {sgd,adam,radam,ranger}]
+                [--lr_schedule LR_SCHEDULE] [--num_cycles NUM_CYCLES]
+                [--poly_exp POLY_EXP] [--warmup_iters WARMUP_ITERS]
+                [--warmup_factor WARMUP_FACTOR] [--use_label_smoothing]
+                [--use_ohem] [--use_lovaszsoftmax] [--use_focal] [--cuda CUDA]
+                [--gpus GPUS] [--resume RESUME] [--savedir SAVEDIR]
+                [--logFile LOGFILE]
+
+Efficient semantic segmentation
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model MODEL         model name: (default ENet)
+  --dataset DATASET     dataset: cityscapes or camvid
+  --input_size INPUT_SIZE
+                        input size of model
+  --num_workers NUM_WORKERS
+                        the number of parallel threads
+  --classes CLASSES     the number of classes in the dataset. 19 and 11 for
+                        cityscapes and camvid, respectively
+  --train_type TRAIN_TYPE
+                        ontrain for training on train set, ontrainval for
+                        training on train+val set
+  --max_epochs MAX_EPOCHS
+                        the number of epochs: 300 for train set, 350 for
+                        train+val set
+  --random_mirror RANDOM_MIRROR
+                        input image random mirror
+  --random_scale RANDOM_SCALE
+                        input image resize 0.5 to 2
+  --lr LR               initial learning rate
+  --batch_size BATCH_SIZE
+                        the batch size is set to 16 for 2 GPUs
+  --optim {sgd,adam,radam,ranger}
+                        select optimizer
+  --lr_schedule LR_SCHEDULE
+                        name of lr schedule: poly
+  --num_cycles NUM_CYCLES
+                        Cosine Annealing Cyclic LR
+  --poly_exp POLY_EXP   polynomial LR exponent
+  --warmup_iters WARMUP_ITERS
+                        warmup iterations
+  --warmup_factor WARMUP_FACTOR
+                        warm up start lr=warmup_factor*lr
+  --use_label_smoothing
+                        CrossEntropy2d Loss with label smoothing or not
+  --use_ohem            OhemCrossEntropy2d Loss for cityscapes dataset
+  --use_lovaszsoftmax   LovaszSoftmax Loss for cityscapes dataset
+  --use_focal           FocalLoss2d for cityscapes dataset
+  --cuda CUDA           running on CPU or GPU
+  --gpus GPUS           default GPU devices (0,1)
+  --resume RESUME       use this file to load last checkpoint for continuing
+                        training
+  --savedir SAVEDIR     directory to save the model snapshot
+  --logFile LOGFILE     storing the training and validation logs
+
+
+example：
+--cuda n --num_workers 1 --resume ./checkpoint/camvid/ENetbs8cpu_trainval/model_96.pth
+--cuda n --num_workers 1 --model Enet --dataset cityscapes
+--cuda n --num_workers 1 --model FPENet --dataset cityscapes
+
+
+            net      size       Flops    params  params_A  params_T  Input(MB)      F/B (MB)  Params(MB)     Total(MB)
+0   EESPNet_Seg  512x1024   5.73 GMac    1.25 M   1248202   1248202        6.0   2422.000000    4.761513   2432.761513
+1         CGNet  512x1024   6.99 GMac  494.26 k    494258    494258        6.0   2759.193848    1.885445   2767.079292
+2    ContextNet  512x1024   1.77 GMac  875.53 k    875531    875531        6.0    917.679199    3.339886    927.019085
+3        DABNet  512x1024  10.44 GMac  754.57 k    754571    754571        6.0   2803.062500    2.878460   2811.940960
+4        EDANet  512x1024   8.92 GMac  685.88 k    685877    685877        6.0   1218.187500    2.616413   1226.803913
+5          ENet  512x1024    4.2 GMac  358.25 k    357184    357184        6.0   4656.000000    1.362549   4663.362549
+6        ERFNet  512x1024  26.79 GMac    2.07 M   2063671   2063671        6.0   1868.000000    7.872280   1881.872280
+7         ESNet  512x1024  24.28 GMac    1.66 M   1660087   1660087        6.0   2204.000000    6.332729   2216.332729
+8        ESPNet  512x1024   2.75 GMac  191.52 k    191517    191517        6.0    940.562500    0.730579    947.293079
+9      FastSCNN  512x1024   1.75 GMac    1.14 M   1137019   1137019        6.0    797.549805    4.337383    807.887188
+10       FPENet  512x1024   1.54 GMac  114.86 k    114861    114861        6.0   1085.502930    0.438160   1091.941090
+11       FSSNet  512x1024   2.63 GMac  174.73 k    174729    174729        6.0  14950.000000    0.666538  14956.666538
+12       LEDNet  512x1024   11.5 GMac  915.29 k    915291    915291        6.0   2339.623383    3.491558   2349.114941
+         SegNet  512x1024  323.84 GMac  29.45 M  29449355  29449355        6.0   3628.000000  112.340374   3746.340374
+13      LinkNet  512x1024  21.76 GMac   11.53 M  11534667  11534667        6.0   1174.500000   44.001263   1224.501263
+14        SQNet  512x1024  142.3 GMac   16.25 M  16248939  16248939        6.0   1886.000000   61.984783   1953.984783
+           UNet  512x1024  248.67 GMac  14.79 M  13395979  13395979        6.0   7056.000000   51.101604   7113.101604
+
+3*360*480
+            net       Flops    params  params_A  params_T  Input(MB)      F/B (MB)  Params(MB)     Total(MB)
+0   EESPNet_Seg   1.94 GMac    1.25 M   1252058   1252058   1.977539    814.984589    4.776222    821.738350
+1         CGNet   2.31 GMac  496.31 k    496306    496306   1.977539    909.778015    1.893257    913.648811
+2    ContextNet   0.58 GMac  876.56 k    876563    876563   1.977539    300.131897    3.343822    305.453259
+3        DABNet   3.45 GMac  756.64 k    756643    756643   1.977539    924.190521    2.886364    929.054424
+4        EDANet   2.95 GMac  689.49 k    689485    689485   1.977539    401.667023    2.630177    406.274738
+5          ENet   1.44 GMac  360.42 k    358336    358336   1.977539  14053.117188    1.366943  14056.461670
+6        ERFNet   8.85 GMac    2.07 M   2064191   2064191   1.977539    626.220703    7.874264    636.072506
+7         ESNet   8.03 GMac    1.66 M   1660607   1660607   1.977539    736.962891    6.334713    745.275143
+8        ESPNet   1.14 GMac  201.54 k    201542    201542   1.977539    352.187347    0.768822    354.933708
+9      FastSCNN   0.59 GMac    1.14 M   1138051   1138051   1.977539    266.796936    4.341320    273.115795
+10       FPENet   0.52 GMac  115.12 k    115125    115125   1.977539    360.409424    0.439167    362.826130
+11       FSSNet   0.92 GMac  175.88 k    175881    175881   1.977539   4937.915039    0.670933   4940.563511
+12       LEDNet   3.79 GMac  917.39 k    917387    917387   1.977539    771.943359    3.499554    777.420452
+13      LinkNet   7.35 GMac   11.54 M  11535699  11535699   1.977539    399.287109   44.005199    445.269848
+14       SegNet  30.01 GMac   29.45 M  29453971  29453971   1.977539   1205.595703  112.357983   1319.931225
+15        SQNet  21.39 GMac   16.26 M  16262771  16262771   1.977539    629.853516   62.037548    693.868603
+16         UNet  21.85 GMac   14.79 M  13396499  13396499   1.977539   2346.152344   51.103588   2399.233471
+
+GFlops:
+
+    FPENet
+    ContextNet
+    FastSCNN
+    FSSNet
+    ESPNet
+    ENet
+    EESPNet_Seg
+    CGNet
+    EDANet
+    DABNet
+    LEDNet
+
+        LinkNet
+        ESNet
+        ERFNet
+
+            SQNet
+            UNet
+            SegNet
+
+F/B:
+FastSCNN
+ContextNet
+ESPNet
+FPENet
+LinkNet
+EDANet
+
+    ERFNet
+    SQNet
+    ESNet
+    LEDNet
+    EESPNet_Seg
+    CGNet
+    DABNet
+
+        SegNet
+        UNet
+        FSSNet
+ENet??
+
+todo:
+Enet??
+FSSNet??
+
+params:
+    FPENet
+    FSSNet
+    ESPNet
+
+    ENet
+    CGNet
+    EDANet
+    DABNet
+    ContextNet
+    LEDNet
+    FastSCNN
+    EESPNet_Seg
+    ESNet
+
+    ERFNet
+    LinkNet
+    UNet
+    SQNet
+    SegNet

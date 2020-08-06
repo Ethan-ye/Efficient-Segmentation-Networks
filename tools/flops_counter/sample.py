@@ -27,12 +27,20 @@ if __name__ == '__main__':
     else:
         ost = open(args.result, 'w')
 
-    with torch.cuda.device(args.device):
-        net = pt_models[args.model]().cuda()
+    # with torch.cuda.device(args.device):
+    #     net = pt_models[args.model]().cuda()
+    #
+    #     flops, params = get_model_complexity_info(net, (3, 224, 224),
+    #                                               as_strings=True,
+    #                                               print_per_layer_stat=True,
+    #                                               ost=ost)
+    #     print('Flops: ' + flops)
+    #     print('Params: ' + params)
+    net = pt_models[args.model]()
 
-        flops, params = get_model_complexity_info(net, (3, 224, 224),
+    flops, params = get_model_complexity_info(net, (3, 224, 224),
                                                   as_strings=True,
                                                   print_per_layer_stat=True,
                                                   ost=ost)
-        print('Flops: ' + flops)
-        print('Params: ' + params)
+    print('Flops: ' + flops)
+    print('Params: ' + params)

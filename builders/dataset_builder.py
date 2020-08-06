@@ -18,7 +18,7 @@ def build_dataset_train(dataset, input_size, batch_size, train_type, random_scal
         if dataset == "cityscapes":
             dataCollect = CityscapesTrainInform(data_dir, 19, train_set_file=dataset_list,
                                                 inform_data_file=inform_data_file)
-        elif dataset == 'camvid':
+        elif (dataset == 'camvid') or (dataset == 'camvid352'):
             dataCollect = CamVidTrainInform(data_dir, 11, train_set_file=dataset_list,
                                             inform_data_file=inform_data_file)
         else:
@@ -48,7 +48,7 @@ def build_dataset_train(dataset, input_size, batch_size, train_type, random_scal
 
         return datas, trainLoader, valLoader
 
-    elif dataset == "camvid":
+    elif (dataset == 'camvid') or (dataset == 'camvid352'):
 
         trainLoader = data.DataLoader(
             CamVidDataSet(data_dir, train_data_list, crop_size=input_size, scale=random_scale,
@@ -75,7 +75,7 @@ def build_dataset_test(dataset, num_workers, none_gt=False):
         if dataset == "cityscapes":
             dataCollect = CityscapesTrainInform(data_dir, 19, train_set_file=dataset_list,
                                                 inform_data_file=inform_data_file)
-        elif dataset == 'camvid':
+        elif (dataset == 'camvid') or (dataset == 'camvid352'):
             dataCollect = CamVidTrainInform(data_dir, 11, train_set_file=dataset_list,
                                             inform_data_file=inform_data_file)
         else:
@@ -105,7 +105,7 @@ def build_dataset_test(dataset, num_workers, none_gt=False):
 
         return datas, testLoader
 
-    elif dataset == "camvid":
+    elif (dataset == 'camvid') or (dataset == 'camvid352'):
 
         testLoader = data.DataLoader(
             CamVidValDataSet(data_dir, test_data_list, mean=datas['mean']),

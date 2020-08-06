@@ -1,7 +1,8 @@
 
 import glob
 import os
-from utilities.print_utils import *
+# from utilities.print_utils import *
+from print_utils import *
 
 def get_mappings(root_dir, files, annot_name):
     pairs = []
@@ -63,6 +64,7 @@ def main(cityscapesPath, split):
         print_info_message('{} created in {} with {} pairs'.format(f_name, cityscapesPath, len(course_pairs)))
 
 if __name__ == '__main__':
-    cityscapes_path = '../../../vision_datasets/cityscapes/'
+    # cityscapes_path = '../../../vision_datasets/cityscapes/'
+    cityscapes_path =  r'D:\DataSet\cityscapes/'
     main(cityscapes_path, "train")
     main(cityscapes_path, "val")

@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     if args.dataset == 'cityscapes':
         args.classes = 19
-    elif args.dataset == 'camvid':
+    elif (args.dataset == 'camvid') or (args.dataset == 'camvid352'):
         args.classes = 11
     else:
         raise NotImplementedError(

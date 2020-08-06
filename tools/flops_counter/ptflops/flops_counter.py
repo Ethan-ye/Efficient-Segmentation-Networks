@@ -11,8 +11,8 @@ def get_model_complexity_info(model, input_res,
                               input_constructor=None, ost=sys.stdout):
     assert type(input_res) is tuple
     assert len(input_res) >= 2
-    flops_model = add_flops_counting_methods(model)
-    flops_model.eval().start_flops_count()
+    flops_model = add_flops_counting_methods(model) #在当前的model上添加各种统计flops的函数
+    flops_model.eval().start_flops_count()          #打开添加的统计函数
     if input_constructor:
         input = input_constructor(input_res)
         _ = flops_model(**input)
@@ -20,7 +20,7 @@ def get_model_complexity_info(model, input_res,
         batch = torch.ones(()).new_empty((1, *input_res),
                                          dtype=next(flops_model.parameters()).dtype,
                                          device=next(flops_model.parameters()).device)
-        _ = flops_model(batch)
+        _ = flops_model(batch)                      #在添加统计方法的model上forward，激活各种hook，得到统计结果
 
     if print_per_layer_stat:
         print_model_with_flops(flops_model, ost=ost)
@@ -110,6 +110,7 @@ def get_model_parameters_number(model):
 def add_flops_counting_methods(net_main_module):
     # adding additional methods to the existing module object,
     # this is done this way so that each function has access to self object
+    # 使用__get()__，将"函数"转变为"对象(net_main_module)的方法（MethodType）"
     net_main_module.start_flops_count = start_flops_count.__get__(net_main_module)
     net_main_module.stop_flops_count = stop_flops_count.__get__(net_main_module)
     net_main_module.reset_flops_count = reset_flops_count.__get__(net_main_module)
@@ -259,7 +260,8 @@ def deconv_flops_counter_hook(conv_module, input, output):
     conv_per_position_flops = kernel_height * kernel_width * in_channels * filters_per_channel
 
     active_elements_count = batch_size * input_height * input_width
-    overall_conv_flops = conv_per_position_flops * active_elements_count
+
+    overall_conv_flops = np.int64(conv_per_position_flops) * np.int64(active_elements_count) #RuntimeWarning: overflow encountered in long_scalars
     bias_flops = 0
     if conv_module.bias is not None:
         output_height, output_width = output.shape[2:]
@@ -291,7 +293,7 @@ def conv_flops_counter_hook(conv_module, input, output):
         flops_mask = conv_module.__mask__.expand(batch_size, 1, output_height, output_width)
         active_elements_count = flops_mask.sum()
 
-    overall_conv_flops = conv_per_position_flops * active_elements_count
+    overall_conv_flops = np.int64(conv_per_position_flops) * np.int64(active_elements_count) #RuntimeWarning: overflow encountered in long_scalars
 
     bias_flops = 0
 

@@ -35,7 +35,9 @@ def setup_seed(seed):
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
-    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.enabled = True    #使用非确定性算法
+    torch.backends.cudnn.benchmark = True  #使用的非确定性算法就会自动寻找最适合当前配置的高效算法，来达到优化运行效率的问题
+    torch.backends.cudnn.deterministic = False #避免随机波动,# if benchmark=True, deterministic will be False
 
 
 def save_predict(output, gt, img_name, dataset, save_path, output_grey=False, output_color=True, gt_color=False):
@@ -46,7 +48,7 @@ def save_predict(output, gt, img_name, dataset, save_path, output_grey=False, ou
     if output_color:
         if dataset == 'cityscapes':
             output_color = cityscapes_colorize_mask(output)
-        elif dataset == 'camvid':
+        elif (dataset == 'camvid') or (dataset == 'camvid352'):
             output_color = camvid_colorize_mask(output)
 
         output_color.save(os.path.join(save_path, img_name + '_color.png'))
@@ -54,7 +56,7 @@ def save_predict(output, gt, img_name, dataset, save_path, output_grey=False, ou
     if gt_color:
         if dataset == 'cityscapes':
             gt_color = cityscapes_colorize_mask(gt)
-        elif dataset == 'camvid':
+        elif (dataset == 'camvid') or (dataset == 'camvid352'):
             gt_color = camvid_colorize_mask(gt)
 
         gt_color.save(os.path.join(save_path, img_name + '_gt.png'))
