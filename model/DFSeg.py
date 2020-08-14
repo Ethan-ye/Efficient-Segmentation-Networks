@@ -475,6 +475,12 @@ DF1Seg(
   (score_u8): ConvTranspose2d(0.04 GMac, 0.380% MACs, 19, 19, kernel_size=(16, 16), stride=(8, 8), padding=(4, 4), groups=19, bias=False)
 )
 
-train_time 1.76
+train_time 1.44
+Remaining training time = 94 hour 16 minutes 56 seconds
+train_time 1.40
+Remaining training time = 91 hour 19 minutes 39 seconds
 
+defaultdict(<class 'float'>, {'batchnorm': 0.115938304, 'conv': 1.840300032})
+10475620224.0 13112923
+25950592512.0 13112923.0
 '''

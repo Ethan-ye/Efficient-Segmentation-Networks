@@ -14,7 +14,7 @@ from fvcore.nn.flop_count import flop_count  # https://github.com/facebookresear
 from tools.flops_counter.ptflops import get_model_complexity_info
 from thop import profile  # https://github.com/Lyken17/pytorch-OpCounter
 
-__all__ = ['DF1Seg']
+__all__ = ['DF1SegG']
 
 
 # https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/surgery.py
@@ -37,7 +37,13 @@ def get_upsampling_weight(in_channels, out_channels, kernel_size):
 class ResBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(ResBlock, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+
+        # self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        if stride == 2:
+            self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=6, stride=2, padding=2, bias=False)
+        else:
+            self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
@@ -123,19 +129,21 @@ class PSPModule(nn.Module):
         return self.relu(out)
 
 
-class DF1Seg(nn.Module):
+class DF1SegG(nn.Module):
     def __init__(self, classes=19):
-        super(DF1Seg, self).__init__()
+        super(DF1SegG, self).__init__()
         # encode
         # Downsample
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3, padding=1, stride=2, bias=False),
+            # nn.Conv2d(3, 32, kernel_size=3, padding=1, stride=2, bias=False),
+            nn.Conv2d(3, 32, kernel_size=6, padding=2, stride=2, bias=False),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True)
         )
         # Downsample
         self.conv2 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=3, padding=1, stride=2, bias=False),
+            # nn.Conv2d(32, 64, kernel_size=3, padding=1, stride=2, bias=False),
+            nn.Conv2d(32, 64, kernel_size=6, padding=2, stride=2, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True)
         )
@@ -189,7 +197,7 @@ class DF1Seg(nn.Module):
         #         m.bias.data.zero_()
 
     def _make_layer(self, planes, blocks, stride=1):
-        if stride != 1 or self.inplanes != planes:
+        if stride != 1 or self.inplanes != planes:#dowmsample or channel adjust
             downsample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes,
                           kernel_size=1, stride=stride, bias=False),
@@ -240,7 +248,7 @@ class DF1Seg(nn.Module):
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = DF1Seg(classes=19).to(device)
+    model = DF1SegG(classes=19).to(device)
     summary(model, (3, 352, 480))
     x = torch.randn(2, 3, 512, 1024)
 
@@ -480,6 +488,13 @@ DF1Seg(
   (score_u8): ConvTranspose2d(0.04 GMac, 0.380% MACs, 19, 19, kernel_size=(16, 16), stride=(8, 8), padding=(4, 4), groups=19, bias=False)
 )
 
-train_time 1.76
+train_time 1.63
+Remaining training time = 105 hour 35 minutes 32 seconds
+train_time 1.56
+Remaining training time = 102 hour 23 minutes 19 seconds
+
+defaultdict(<class 'float'>, {'batchnorm': 0.115938304, 'conv': 1.840300032})
+14439237504.0 14387323
+33877827072.0 14387323.0
 
 '''

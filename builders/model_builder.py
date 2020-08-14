@@ -16,7 +16,7 @@ from model.DABNet import DABNet
 from model.FSSNet import FSSNet
 from model.FPENet import FPENet
 from model.DFSeg import DF1Seg
-
+from model.DFSegG import DF1SegG
 
 def build_model(model_name, num_classes):
     if model_name == 'SQNet':
@@ -55,3 +55,5 @@ def build_model(model_name, num_classes):
         return FPENet(classes=num_classes)
     elif model_name == 'DF1Seg':
         return DF1Seg(classes=num_classes)
+    elif model_name == 'DF1SegG':
+        return DF1SegG(classes=num_classes)
