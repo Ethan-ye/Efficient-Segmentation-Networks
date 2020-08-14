@@ -66,7 +66,7 @@ example：
 --cuda n --num_workers 1 --resume ./checkpoint/camvid/ENetbs8cpu_trainval/model_96.pth
 --cuda n --num_workers 1 --model Enet --dataset cityscapes
 --cuda n --num_workers 1 --model FPENet --dataset cityscapes
-
+--cuda n --num_workers 1 --model DF1Seg --dataset camvid352 --use_label_smoothing --batch_size=2
 
             net      size       Flops    params  params_A  params_T  Input(MB)      F/B (MB)  Params(MB)     Total(MB)
 0   EESPNet_Seg  512x1024   5.73 GMac    1.25 M   1248202   1248202        6.0   2422.000000    4.761513   2432.761513
@@ -174,3 +174,34 @@ params:
     UNet
     SQNet
     SegNet
+
+
+test
+usage: test.py [-h] [--model MODEL] [--dataset DATASET]
+               [--num_workers NUM_WORKERS] [--batch_size BATCH_SIZE]
+               [--checkpoint CHECKPOINT] [--save_seg_dir SAVE_SEG_DIR]
+               [--best] [--save] [--cuda CUDA] [--gpus GPUS]
+
+Efficient semantic segmentation
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model MODEL         model name: (default ENet)
+  --dataset DATASET     dataset: cityscapes or camvid
+  --num_workers NUM_WORKERS
+                        the number of parallel threads
+  --batch_size BATCH_SIZE
+                        the batch_size is set to 1 when evaluating or testing
+  --checkpoint CHECKPOINT
+                        use the file to load the checkpoint for evaluating or
+                        testing
+  --save_seg_dir SAVE_SEG_DIR
+                        saving path of prediction result
+  --best                Get the best result among last few checkpoints
+  --save                Save the predicted image
+  --cuda CUDA           run on CPU or GPU
+  --gpus GPUS           gpu ids (default: 0)
+
+
+  --cuda n --num_workers 1 --resume ./checkpoint/camvid/ENetbs8cpu_trainval/model_96.pth
+  --cuda n --best --save --num_workers 1 --model ENet --dataset camvid --checkpoint ./checkpoint/camvid/ENetbs8cpu_trainval/model_96.pth

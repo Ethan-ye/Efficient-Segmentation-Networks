@@ -262,9 +262,9 @@ def train_model(args):
 
         # Individual Setting for save model !!!
         if (args.dataset == 'camvid') or (args.dataset == 'camvid352'):
-            torch.save(state, model_file_name)
+            torch.save(state, model_file_name)      #save in every epoch
         elif args.dataset == 'cityscapes':
-            if epoch >= args.max_epochs - 10:
+            if epoch >= args.max_epochs - 10:       #save
                 torch.save(state, model_file_name)
             elif not epoch % 50:
                 torch.save(state, model_file_name)

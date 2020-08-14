@@ -1,5 +1,6 @@
 import os
 import time
+import argparse
 import torch
 import numpy as np
 import torch.backends.cudnn as cudnn
@@ -11,6 +12,20 @@ from utils.utils import save_predict
 from utils.metric.metric import get_iou
 from utils.convert_state import convert_state_dict
 
+def str2bool(v):
+    """ Usage:
+    parser.add_argument('--pretrained', default=True, type=str2bool, nargs='?', const=True,
+                        dest='pretrained', help='Whether to use pretrained models.')
+    --pretrained    # 使用const中指定的值作为参数值
+    --pretrained 0  # False
+    不加参数         # True
+    """
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Unsupported value encountered.')
 
 def parse_args():
     parser = ArgumentParser(description='Efficient semantic segmentation')
@@ -23,9 +38,10 @@ def parse_args():
                         help="use the file to load the checkpoint for evaluating or testing ")
     parser.add_argument('--save_seg_dir', type=str, default="./result/",
                         help="saving path of prediction result")
-    parser.add_argument('--best', action='store_true', help="Get the best result among last few checkpoints")
+    parser.add_argument('--best', action='store_true', help="Get the best result among last few(10) checkpoints")
     parser.add_argument('--save', action='store_true', help="Save the predicted image")
-    parser.add_argument('--cuda', default=True, help="run on CPU or GPU")
+    # parser.add_argument('--cuda', default=True, help="run on CPU or GPU")
+    parser.add_argument('--cuda', type=str2bool, nargs='?', const=True, help="running on CPU or GPU")
     parser.add_argument("--gpus", default="0", type=str, help="gpu ids (default: 0)")
     args = parser.parse_args()
 
@@ -48,10 +64,16 @@ def test(args, test_loader, model):
     data_list = []
     for i, (input, label, size, name) in enumerate(test_loader):
         with torch.no_grad():
-            input_var = input.cuda()
+            if args.cuda:
+                input_var = input.cuda()
+            else:
+                input_var = input
+        if args.cuda:
+            torch.cuda.synchronize()
         start_time = time.time()
         output = model(input_var)
-        torch.cuda.synchronize()
+        if args.cuda:
+            torch.cuda.synchronize()
         time_taken = time.time() - start_time
         print('[%d/%d]  time: %.2f' % (i + 1, total_batches, time_taken))
         output = output.cpu().data[0].numpy()
