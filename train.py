@@ -79,9 +79,9 @@ def parse_args():
     parser.add_argument('--warmup_iters', type=int, default=500, help='warmup iterations')
     parser.add_argument('--warmup_factor', type=float, default=1.0 / 3, help='warm up start lr=warmup_factor*lr')
     parser.add_argument('--use_label_smoothing', action='store_true', default=False,
-                        help="CrossEntropy2d Loss with label smoothing or not")
+                        help="CrossEntropy2d Loss with label smoothing or not")     # soft label
     parser.add_argument('--use_ohem', action='store_true', default=False,
-                        help='OhemCrossEntropy2d Loss for cityscapes dataset')
+                        help='OhemCrossEntropy2d Loss for cityscapes dataset')      # on line hard example mining
     parser.add_argument('--use_lovaszsoftmax', action='store_true', default=False,
                         help='LovaszSoftmax Loss for cityscapes dataset')
     parser.add_argument('--use_focal', action='store_true', default=False, help=' FocalLoss2d for cityscapes dataset')
@@ -262,7 +262,11 @@ def train_model(args):
 
         # Individual Setting for save model !!!
         if (args.dataset == 'camvid') or (args.dataset == 'camvid352'):
-            torch.save(state, model_file_name)      #save in every epoch
+            # torch.save(state, model_file_name)      #save in every epoch
+            if epoch >= args.max_epochs - 10:       #save
+                torch.save(state, model_file_name)
+            elif not epoch % 50:
+                torch.save(state, model_file_name)
         elif args.dataset == 'cityscapes':
             if epoch >= args.max_epochs - 10:       #save
                 torch.save(state, model_file_name)

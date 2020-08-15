@@ -67,6 +67,7 @@ example：
 --cuda n --num_workers 1 --model Enet --dataset cityscapes
 --cuda n --num_workers 1 --model FPENet --dataset cityscapes
 --cuda n --num_workers 1 --model DF1Seg --dataset camvid352 --use_label_smoothing --batch_size=2
+--cuda y --num_workers 2 --model DF1Seg --dataset cityscapes --use_focal --batch_size=4 --resume ./checkpoint/camvid352/DF1SegGbs4gpu1_trainval/model_756.pth
 
             net      size       Flops    params  params_A  params_T  Input(MB)      F/B (MB)  Params(MB)     Total(MB)
 0   EESPNet_Seg  512x1024   5.73 GMac    1.25 M   1248202   1248202        6.0   2422.000000    4.761513   2432.761513
